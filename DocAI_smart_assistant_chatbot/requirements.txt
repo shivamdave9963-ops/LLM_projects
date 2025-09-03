@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHIV-AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&family=Exo+2:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { 
+            --glow-color: #00e0ff; --primary-font: 'Exo 2', sans-serif; --title-font: 'Orbitron', sans-serif;
+            --bg-color: #0a0f18; --container-bg: rgba(10, 25, 47, 0.5); --border-color: rgba(0, 224, 255, 0.3);
+            --text-color: #e0e0e0; --sidebar-bg: rgba(0, 150, 200, 0.25); --input-bg: rgba(0, 0, 0, 0.3);
+            --input-border: #444; --msg-user-bg: rgba(0, 100, 200, 0.3); --msg-ai-bg: rgba(50, 50, 80, 0.4);
+            --history-hover-bg: rgba(0, 224, 255, 0.1);
+        }
+        body.light-theme {
+            --glow-color: #007bff; --bg-color: #f0f2f5; --container-bg: rgba(255, 255, 255, 0.8);
+            --border-color: #d1d5db; --text-color: #1f2937; --sidebar-bg: #e5e7eb;
+            --input-bg: #ffffff; --input-border: #cccccc; --msg-user-bg: #dbeafe;
+            --msg-ai-bg: #e5e7eb; --history-hover-bg: #d1d5db;
+        }
+        body { 
+            font-family: var(--primary-font); background-color: var(--bg-color); 
+            color: var(--text-color); transition: background-color 0.3s, color 0.3s;
+        }
+        .text-glow { text-shadow: 0 0 8px var(--glow-color), 0 0 12px rgba(0, 224, 255, 0.7); }
+        body.light-theme .text-glow { text-shadow: none; color: #0056b3; }
+        .container-glow { 
+            background-color: var(--container-bg); border: 1px solid var(--border-color); 
+            box-shadow: 0 0 15px rgba(0, 224, 255, 0.1), inset 0 0 10px rgba(0, 224, 255, 0.05);
+            backdrop-filter: blur(8px); transition: background-color 0.3s, border-color 0.3s;
+        }
+        body.light-theme .container-glow { box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); backdrop-filter: blur(12px); }
+        .sidebar-container { background-color: var(--sidebar-bg) !important; }
+        .btn-glow { 
+            background-color: transparent; border: 1px solid var(--border-color); 
+            color: var(--glow-color); transition: all 0.3s ease; 
+        }
+        body.light-theme .btn-glow { color: #007bff; border-color: #007bff; }
+        .btn-glow:hover:not(:disabled) { 
+            background-color: rgba(0, 224, 255, 0.15); border-color: var(--glow-color);
+            box-shadow: 0 0 15px var(--glow-color);
+        }
+        body.light-theme .btn-glow:hover:not(:disabled) { background-color: rgba(0, 123, 255, 0.1); box-shadow: 0 0 12px rgba(0, 123, 255, 0.5); }
+        .btn-glow:disabled { border-color: #444; color: #555; cursor: not-allowed; opacity: 0.6; }
+        input[type="text"] { background-color: var(--input-bg); border: 1px solid var(--input-border); color: var(--text-color); }
+        .msg-bubble { padding: 0.75rem 1rem; border-radius: 0.75rem; word-wrap: break-word; }
+        .user-msg .msg-bubble { background-color: var(--msg-user-bg); }
+        .ai-msg .msg-bubble { background-color: var(--msg-ai-bg); }
+        .history-item { 
+            display: flex; justify-content: space-between; align-items: center;
+            border: 1px solid transparent; transition: all 0.2s ease-in-out; 
+        }
+        .history-item-title { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .history-item:hover { background-color: var(--history-hover-bg); border-color: var(--border-color); }
+        .history-item.active { background-color: rgba(0, 224, 255, 0.2); border-color: var(--glow-color); box-shadow: 0 0 10px rgba(0, 224, 255, 0.3); }
+        body.light-theme .history-item.active { background-color: #9ca3af; border-color: var(--glow-color); box-shadow: none; color: #fff; }
+        .delete-btn {
+            background: none; border: none; color: #888; flex-shrink: 0;
+            padding: 0.25rem; border-radius: 50%; display: none;
+        }
+        .history-item:hover .delete-btn { display: block; }
+        .delete-btn:hover { color: #ff4d4d; background-color: rgba(255, 0, 0, 0.2); }
+        #input-area.input-area-glow {
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+        body.light-theme #input-area.input-area-glow {
+            box-shadow: 0 0 15px rgba(0, 123, 255, 0.6), inset 0 0 10px rgba(0, 123, 255, 0.2);
+            border: 1px solid rgba(0, 123, 255, 0.8);
+        }
+        .chat-msg { display: flex; align-items: flex-start; gap: 0.75rem; max-width: 90%; }
+        .user-msg { align-self: flex-end; flex-direction: row-reverse; }
+        .system-msg { align-self: center; background-color: rgba(100, 100, 120, 0.2); color: #ccc; font-size: 0.8rem; max-width: fit-content; padding: 0.5rem 1rem; border-radius: 0.5rem; }
+        .avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background-color: var(--container-bg); border: 1px solid var(--border-color); }
+        .thinking-bubble .dot-flashing { position: relative; width: 8px; height: 8px; border-radius: 5px; background-color: var(--glow-color); color: var(--glow-color); animation: dot-flashing 1s infinite linear alternate; animation-delay: .5s; }
+        .thinking-bubble .dot-flashing::before, .thinking-bubble .dot-flashing::after { content: ''; display: inline-block; position: absolute; top: 0; }
+        .thinking-bubble .dot-flashing::before { left: -12px; width: 8px; height: 8px; border-radius: 5px; background-color: var(--glow-color); animation: dot-flashing 1s infinite alternate; animation-delay: 0s; }
+        .thinking-bubble .dot-flashing::after { left: 12px; width: 8px; height: 8px; border-radius: 5px; background-color: var(--glow-color); animation: dot-flashing 1s infinite alternate; animation-delay: 1s; }
+        @keyframes dot-flashing { 0% { background-color: var(--glow-color); } 50%, 100% { background-color: rgba(0, 224, 255, 0.3); } }
+        #mic-button.listening { color: #ff4d4d; border-color: #ff4d4d; box-shadow: 0 0 15px #ff4d4d; }
+        .msg-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; opacity: 0; transition: opacity 0.3s; }
+        .ai-msg-container:hover .msg-actions { opacity: 1; }
+        .action-btn { background: none; border: none; color: #888; cursor: pointer; padding: 0.25rem; transition: color 0.2s; }
+        .action-btn:hover { color: var(--glow-color); }
+        body.light-theme .action-btn:hover { color: var(--glow-color); }
+        .action-btn.active { color: var(--glow-color); }
+        .knowledge-item {
+            background-color: rgba(0, 217, 255, 0.1);
+            border: 1px solid var(--glow-color);
+            padding: 0.25rem 0.5rem 0.25rem 0.75rem;
+            border-radius: 9999px; font-size: 0.8rem;
+            display: inline-flex; align-items: center; gap: 0.5rem;
+        }
+        .knowledge-item-remove {
+            background: none; border: none; color: #888;
+            padding: 0.1rem; border-radius: 50%;
+            cursor: pointer; line-height: 1;
+        }
+        .knowledge-item-remove:hover { color: #ff4d4d; background-color: rgba(255,0,0,0.2); }
+    </style>
+</head>
+<body class="h-screen p-4 flex gap-4">
+
+    <!-- Left Sidebar -->
+    <aside class="w-1/4 lg:w-1/5 h-full flex flex-col gap-4">
+        <div class="flex-shrink-0">
+             <h1 class="text-3xl font-bold text-glow text-center" style="font-family: var(--title-font);">SHIV-AI</h1>
+        </div>
+        <div class="container-glow sidebar-container rounded-2xl p-4 flex-grow flex flex-col">
+            <button id="new-chat-button" class="w-full btn-glow font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/></svg>
+                New Chat
+            </button>
+            <div id="history-container" class="flex-grow overflow-y-auto pr-2">
+                <ul id="history-list" class="space-y-2"></ul>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Right Main Chat Area -->
+    <main class="w-3/4 lg:w-4/5 h-full rounded-2xl flex flex-col overflow-hidden">
+        <div class="flex-shrink-0 relative text-center mb-4 px-2">
+             <p class="text-md text-yellow-400 text-glow">Indian-AI Where wisdom meets future innovations 🇮🇳</p>
+             <button id="theme-toggle" class="btn-glow p-2 rounded-full absolute top-1/2 right-0 -translate-y-1/2"></button>
+        </div>
+        
+        <div class="container-glow flex-grow rounded-2xl flex flex-col p-6 overflow-hidden">
+            <div id="knowledge-base-display" class="pb-2 mb-2 border-b border-gray-700 flex flex-wrap gap-2 items-center min-h-[2.5rem]"></div>
+            <div id="chat-container" class="flex-grow flex flex-col gap-4 rounded-lg p-4 overflow-y-auto mb-4 -mx-4 border-t border-b" style="border-color: var(--border-color);">
+                <div id="placeholder-text" class="text-center text-gray-400 p-4 m-auto">...</div>
+            </div>
+            <div id="input-area" class="flex items-center gap-4 flex-shrink-0">
+                <input type="file" id="add-file-input" class="hidden" accept=".pdf,.txt,.csv" multiple>
+                <button type="button" id="add-file-button" title="Upload Documents" class="btn-glow p-3 rounded-full flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/></svg>
+                </button>
+                <button type="button" id="mic-button" title="Ask with Voice" class="btn-glow p-3 rounded-full flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5"/><path d="M8 8a3 3 0 0 0 3-3V3a3 3 0 0 0-6 0v2a3 3 0 0 0 3 3"/></svg>
+                </button>
+                <input type="text" id="query-input" placeholder="Type your prompt here or use the mic..." class="flex-grow rounded-lg p-3">
+                <button id="ask-button" class="btn-glow font-bold py-3 px-6 rounded-lg">Ask</button>
+            </div>
+        </div>
+    </main>
+    
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:5000';
+        const chatContainer = document.getElementById('chat-container');
+        const queryInput = document.getElementById('query-input');
+        const askButton = document.getElementById('ask-button');
+        const addFileButton = document.getElementById('add-file-button');
+        const addFileInput = document.getElementById('add-file-input');
+        const newChatButton = document.getElementById('new-chat-button');
+        const historyList = document.getElementById('history-list');
+        const inputArea = document.getElementById('input-area');
+        const themeToggleButton = document.getElementById('theme-toggle');
+        const micButton = document.getElementById('mic-button');
+        const knowledgeDisplay = document.getElementById('knowledge-base-display');
+
+        let chats = [];
+        let currentChatId = null;
+
+        // --- VOICE ASSISTANT LOGIC ---
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+        let isListening = false;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => { isListening = true; micButton.classList.add('listening'); queryInput.placeholder = "Listening..."; };
+            recognition.onend = () => {
+                isListening = false;
+                micButton.classList.remove('listening');
+                queryInput.placeholder = "Type your prompt here or use the mic...";
+                const finalTranscript = queryInput.value.trim();
+                if (finalTranscript) { handleAsk(); }
+            };
+            recognition.onerror = (event) => {
+                 console.error("Speech recognition error:", event.error);
+                 isListening = false;
+                 micButton.classList.remove('listening');
+                 queryInput.placeholder = "Mic error. Please type.";
+            };
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) { finalTranscript += event.results[i][0].transcript; } 
+                    else { interimTranscript += event.results[i][0].transcript; }
+                }
+                queryInput.value = finalTranscript + interimTranscript;
+            };
+        } else {
+            micButton.style.display = 'none';
+        }
+        const toggleListening = () => {
+            if (!SpeechRecognition) return;
+            if (isListening) { recognition.stop(); } 
+            else { queryInput.value = ''; recognition.start(); }
+        };
+
+        // --- THEME LOGIC ---
+        const sunIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m-4-5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m10 0a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m-10.866-5.866a.5.5 0 0 1 .707 0l1.414 1.414a.5.5 0 0 1-.707.707L1.634 2.34a.5.5 0 0 1 0-.707m11.314 0a.5.5 0 0 1 0 .707l-1.414 1.414a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m-11.314 11.314a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1-.707.707l-1.414-1.414a.5.5 0 0 1 0-.707m11.314 0a.5.5 0 0 1 0-.707l-1.414 1.414a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0Z"/></svg>`;
+        const moonIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M6 .278a.77.77 0 0 1 .08.858 7.2 7.2 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.79.79 0 0 1 .81.316.73.73 0 0 1-.031.893A8.35 8.35 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.75.75 0 0 1 6 .278"/></svg>`;
+        const applyTheme = (theme) => {
+            if (theme === 'light') { document.body.classList.add('light-theme'); themeToggleButton.innerHTML = moonIcon; } 
+            else { document.body.classList.remove('light-theme'); themeToggleButton.innerHTML = sunIcon; }
+        };
+        const toggleTheme = () => {
+            const currentTheme = localStorage.getItem('shiv-ai-theme') || 'dark';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('shiv-ai-theme', newTheme);
+            applyTheme(newTheme);
+        };
+        
+        // --- HELPER & CORE FUNCTIONS ---
+        const setControlsState = (isLoading) => {
+            queryInput.disabled = isLoading; askButton.disabled = isLoading; addFileButton.disabled = isLoading;
+            newChatButton.disabled = isLoading; micButton.disabled = isLoading;
+            askButton.innerHTML = isLoading ? '<div class="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin mx-auto"></div>' : 'Ask';
+        };
+        const saveChats = () => localStorage.setItem('shiv-ai-chats', JSON.stringify(chats));
+        const loadChats = () => {
+            const saved = localStorage.getItem('shiv-ai-chats');
+            chats = saved ? JSON.parse(saved) : [];
+            if (chats.length === 0) { startNewChat(false); } 
+            else { loadChat(chats[0].id); }
+            renderHistoryList();
+        };
+        const renderHistoryList = () => {
+            historyList.innerHTML = '';
+            [...chats].reverse().forEach(chat => {
+                const li = document.createElement('li');
+                li.className = `history-item p-2 rounded-lg cursor-pointer ${chat.id === currentChatId ? 'active' : ''}`;
+                const titleSpan = document.createElement('span');
+                titleSpan.className = 'history-item-title';
+                titleSpan.textContent = chat.title;
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>`;
+                deleteBtn.onclick = (e) => { e.stopPropagation(); deleteChat(chat.id); };
+                li.appendChild(titleSpan);
+                li.appendChild(deleteBtn);
+                li.onclick = () => loadChat(chat.id);
+                historyList.appendChild(li);
+            });
+        };
+        const deleteChat = (id) => {
+            chats = chats.filter(c => c.id !== id);
+            saveChats();
+            renderHistoryList();
+            if (currentChatId === id) {
+                if (chats.length > 0) { loadChat(chats[0].id); } 
+                else { startNewChat(); }
+            }
+        };
+        const renderChatMessages = (chat) => {
+            chatContainer.innerHTML = '';
+            updateKnowledgeDisplay(chat.loadedFiles || []);
+            const placeholderHTML = `<div id="placeholder-text" class="text-center text-gray-400 p-4 m-auto">Ask me anything, or upload a document to begin.</div>`;
+            if (!chat || chat.messages.length === 0) { chatContainer.innerHTML = placeholderHTML; return; }
+            chat.messages.forEach(msg => {
+                if (msg.type === 'system') { displaySystemMessage(msg.text); } 
+                else { displayMessage(msg.text, msg.type, false); }
+            });
+        };
+        const startNewChat = async (resetBackend = true) => {
+            if (resetBackend) {
+                setControlsState(true);
+                try { await fetch(`${API_BASE_URL}/new_chat`, { method: 'POST' }); } 
+                catch (e) { console.error("Failed to reset backend", e); } 
+                finally { setControlsState(false); }
+            }
+            const newChat = { id: Date.now().toString(), title: 'New Conversation', messages: [], loadedFiles: [] };
+            chats.push(newChat);
+            currentChatId = newChat.id;
+            renderChatMessages(newChat);
+            saveChats();
+            renderHistoryList();
+        };
+        const loadChat = (id) => {
+            const chat = chats.find(c => c.id === id);
+            if(chat) { currentChatId = id; renderChatMessages(chat); renderHistoryList(); }
+        };
+        const addMessageToCurrentChat = (text, type, fileList = null) => {
+            const chat = chats.find(c => c.id === currentChatId);
+            if (chat) {
+                chat.messages.push({ text, type });
+                if (chat.messages.length === 1 && type === 'user') { chat.title = text.substring(0, 30) + (text.length > 30 ? '...' : ''); }
+                if (fileList) { chat.loadedFiles = fileList; }
+                saveChats();
+                renderHistoryList();
+            }
+        };
+        const displayMessage = (message, sender, isThinking = false) => {
+            const placeholder = chatContainer.querySelector('#placeholder-text');
+            if(placeholder) placeholder.remove();
+            const msgContainer = document.createElement('div');
+            msgContainer.className = `flex flex-col ${sender === 'user' ? 'items-end' : 'items-start'}`;
+            const msgWrapper = document.createElement('div');
+            msgWrapper.className = `chat-msg ${sender === 'user' ? 'user-msg' : 'ai-msg'}`;
+            if(sender === 'ai') msgContainer.classList.add('ai-msg-container');
+            msgWrapper.innerHTML = `
+                <div class="avatar">
+                    ${sender === 'user' ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0m4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4m-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664z"/></svg>` : `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8 1a2.5 2.5 0 0 1 2.5 2.5V4h-5v-.5A2.5 2.5 0 0 1 8 1M3.5 3v-.5a3.5 3.5 0 1 1 7 0V3H12a2 2 0 0 1 2 2v1.5a.5.5 0 0 1-1 0V5.5a1 1 0 0 0-1-1H1v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V5.5a.5.5 0 0 1 1 0V7a2 2 0 0 1-2 2h-1.5v.5a.5.5 0 0 1-1 0V9.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1H11v1.5a.5.5 0 0 1-1 0V11.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1v1.5a.5.5 0 0 1-1 0v-2A2.5 2.5 0 0 1 8 9.5V8.5a.5.5 0 0 1 1 0V11a1.5 1.5 0 0 0 3 0V5.5a.5.5 0 0 1 1 0V7a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V5.5a1 1 0 0 0-1-1H.5a.5.5 0 0 1 0-1H3.5zM2 5.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 .5.5v1.293l.354.354a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 0 1 0-.708l.354-.354V5.5z"/></svg>`}
+                </div>
+                <div class="msg-bubble">${isThinking ? `<div class="thinking-bubble"><div class="dot-flashing"></div></div>` : message}</div>
+            `;
+            msgContainer.appendChild(msgWrapper);
+            if (sender === 'ai' && !isThinking) {
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'msg-actions';
+                const likeBtn = document.createElement('button');
+                likeBtn.className = 'action-btn';
+                likeBtn.title = "Like";
+                likeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M6.61 1.646a.5.5 0 0 1 .78 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.78-.708L12.22 8 6.61 2.354a.5.5 0 0 1 0-.708z"/><path d="M4.61 1.646a.5.5 0 0 1 .78 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.78-.708L10.22 8 4.61 2.354a.5.5 0 0 1 0-.708z"/></svg>`;
+                const dislikeBtn = document.createElement('button');
+                dislikeBtn.className = 'action-btn';
+                dislikeBtn.title = "Dislike";
+                dislikeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8.864 15.536a.5.5 0 0 1-.527 0L1.864 9.136a.5.5 0 0 1 0-.708L8.337.964a.5.5 0 0 1 .708 0l6.472 6.472a.5.5 0 0 1 0 .708zM1 8l7.293-7.293a1 1 0 0 1 1.414 0L16 7.293a1 1 0 0 1 0 1.414L8.707 16a1 1 0 0 1-1.414 0z"/></svg>`;
+                const speakBtn = document.createElement('button');
+                speakBtn.className = 'action-btn';
+                speakBtn.title = "Listen to this";
+                speakBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.536 14.01a.5.5 0 0 1-.707 0L8 11.207l-2.828 2.829a.5.5 0 0 1-.707-.707L7.293 10.5 4.464 7.672a.5.5 0 0 1 .707-.707L8 9.793l2.828-2.828a.5.5 0 0 1 .707.707L8.707 10.5l2.829 2.828a.5.5 0 0 1 0 .707zM8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/></svg>`;
+                likeBtn.onclick = () => { likeBtn.classList.toggle('active'); dislikeBtn.classList.remove('active'); };
+                dislikeBtn.onclick = () => { dislikeBtn.classList.toggle('active'); likeBtn.classList.remove('active'); };
+                speakBtn.onclick = () => speak(message);
+                actionsDiv.appendChild(likeBtn);
+                actionsDiv.appendChild(dislikeBtn);
+                actionsDiv.appendChild(speakBtn);
+                msgContainer.appendChild(actionsDiv);
+            }
+            chatContainer.appendChild(msgContainer);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            return msgContainer;
+        };
+        const displaySystemMessage = (message) => {
+            const placeholder = chatContainer.querySelector('#placeholder-text');
+            if(placeholder) placeholder.remove();
+            const msgWrapper = document.createElement('div');
+            msgWrapper.className = 'system-msg';
+            msgWrapper.textContent = message;
+            chatContainer.appendChild(msgWrapper);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        };
+        const handleAsk = async () => {
+            const query = queryInput.value.trim();
+            if (!query) return;
+            displayMessage(query, 'user');
+            addMessageToCurrentChat(query, 'user');
+            queryInput.value = '';
+            setControlsState(true);
+            const aiMsgWrapper = displayMessage('', 'ai', true);
+            try {
+                const response = await fetch(`${API_BASE_URL}/ask`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query }) });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Unknown error');
+                const answer = result.answer;
+                aiMsgWrapper.remove();
+                displayMessage(answer, 'ai');
+                addMessageToCurrentChat(answer, 'ai');
+                speak(answer);
+            } catch (error) {
+                const errorText = `Sorry, an error occurred: ${error.message}`;
+                aiMsgWrapper.remove();
+                displayMessage(errorText, 'ai');
+                addMessageToCurrentChat(errorText, 'ai');
+            } finally {
+                setControlsState(false);
+                queryInput.focus();
+            }
+        };
+        const handleFileUpload = async (files) => {
+            if (!files || files.length === 0) return;
+            displaySystemMessage(`Processing ${files.length} file(s)...`);
+            setControlsState(true);
+            const formData = new FormData();
+            Array.from(files).forEach(file => formData.append('files', file));
+            try {
+                const response = await fetch(`${API_BASE_URL}/upload_files`, { method: 'POST', body: formData });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Unknown error');
+                displaySystemMessage(result.message);
+                updateKnowledgeDisplay(result.loaded_files);
+                addMessageToCurrentChat(result.message, 'system', result.loaded_files);
+            } catch (error) {
+                displaySystemMessage(`Error uploading files: ${error.message}`);
+                addMessageToCurrentChat(`Error: ${error.message}`, 'system');
+            } finally {
+                setControlsState(false);
+                addFileInput.value = '';
+            }
+        };
+        const speak = (text) => {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US';
+                window.speechSynthesis.speak(utterance);
+            }
+        };
+
+        const handleRemoveFile = async (fileName) => {
+            displaySystemMessage(`Removing "${fileName}"...`);
+            setControlsState(true);
+            try {
+                const response = await fetch(`${API_BASE_URL}/remove_file`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: fileName })
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error);
+
+                displaySystemMessage(result.message);
+                updateKnowledgeDisplay(result.loaded_files);
+                addMessageToCurrentChat(result.message, 'system', result.loaded_files);
+
+            } catch (error) {
+                displaySystemMessage(`Error removing file: ${error.message}`);
+                addMessageToCurrentChat(`Error: ${error.message}`, 'system');
+            } finally {
+                setControlsState(false);
+            }
+        };
+
+        const updateKnowledgeDisplay = (fileList = []) => {
+            knowledgeDisplay.innerHTML = '';
+            if (fileList.length > 0) {
+                fileList.forEach(fileName => {
+                    const item = document.createElement('div');
+                    item.className = 'knowledge-item';
+                    const nameSpan = document.createElement('span');
+                    nameSpan.textContent = fileName;
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'knowledge-item-remove';
+                    removeBtn.innerHTML = '&#x2715;'; // Cross icon
+                    removeBtn.onclick = () => handleRemoveFile(fileName);
+                    item.appendChild(nameSpan);
+                    item.appendChild(removeBtn);
+                    knowledgeDisplay.appendChild(item);
+                });
+            }
+        };
+
+        // --- INIT & EVENT LISTENERS ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('shiv-ai-theme') || 'dark';
+            applyTheme(savedTheme);
+            loadChats();
+        });
+        themeToggleButton.addEventListener('click', toggleTheme);
+        newChatButton.addEventListener('click', () => startNewChat(true));
+        askButton.addEventListener('click', handleAsk);
+        queryInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAsk(); } });
+        addFileButton.addEventListener('click', () => addFileInput.click());
+        addFileInput.addEventListener('change', (e) => handleFileUpload(e.target.files));
+        micButton.addEventListener('click', toggleListening);
+        queryInput.addEventListener('focus', () => { inputArea.classList.add('input-area-glow'); });
+        queryInput.addEventListener('blur', () => { inputArea.classList.remove('input-area-glow'); });
+    </script>
+</body>
+</html>
+
